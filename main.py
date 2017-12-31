@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import requests
+import os
+import getopt
 from bs4 import BeautifulSoup as BS
 import time
 from subprocess import Popen  # 打开图片
@@ -12,19 +15,71 @@ import pickle
 user='xxxx'
 pwdd='xxxx'
 
+
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36'
-}
+}            
+    
 
-def GetTestScore():
+# 模拟浏览器访问
+
+home_url = "http://student.7net.cc/Default"
+base_login = "http://student.7net.cc/Login"  # 一定不能写成http,否则无法登录
+
+session = requests.session()
+Login = False
+
+def Check_Login():
+    if Login == False:
+        data = {
+            '_septnet_document' : '{"usercode":"'+user+'","password":"'+pwdd+'"}'
+        }
+    
+        response = session.post(base_login, data=data, headers=headers)
+    else: return
+# print(response.content.decode("utf-8"))
+
+    # 第六步 保存cookie
+
+
+# 获取首页信息
+# resp = session.get(home_url, headers=headers, allow_redirects=False)
+        
+    
+
+def DetailPreProcess():
+    if os.path.exists('./Detail.raw'):
+        if os.path.getsize('./Detail.raw'):
+            return
+    json.dump([],open('./Detail.raw','w'))
+     
+
+        
+def GetTestDetail(exGuid, studentCode):
+    DetailPreProcess()
+    TList=json.load(open("Detail.raw","r"))
+
+    for tl in TList:
+        if tl['examPlanGuid'] == exGuid:
+            return tl
+    Check_Login()
     requrl="http://student.7net.cc/exam/defaulExamInfo"
+    st = '{"examGuid":"'+exGuid+'","studentCode":"'+studentCode+'"}'
     data={
-        "_septnet_document" : '{"examGuid":"dea920f7-f6b7-449f-a8ef-41b2cb40ed21","studentCode":"215272710"}'
+        "_septnet_document" : st
         }
     response = session.post(requrl, data=data, headers=headers)
-    print(response.content.decode("utf-8"))
+    TestList=response.content.decode("utf-8")
+    TestList=TestList[4:]
+    #print(TestList)
+    TestFinal=json.loads(TestList)
+    TList.append(TestFinal)
+    json.dump(TList,open("Detail.raw","w"))
+    return TestFinal
 
-def GetTestList():
+
+def UpdateTestList():
+    Check_Login()
     requrl="http://student.7net.cc/Exam/claimExamList"
     data={
         "_septnet_document" : '{"viewIndex":1,"viewLength":200,"score":1}'
@@ -34,74 +89,68 @@ def GetTestList():
     TestList=TestList[4:]
     #print(TestList)
     TestFinal=json.loads(TestList)
-    return TestFinal['List']
+    json.dump(TestFinal['List'],open("Tests.raw","w"))
 
 
-def FetchDetailedTest(TestList):
-    json.dump(TestList, open("tmp.txt","w"))
 
-    obj2=json.load(open("tmp.txt","r"))
-    print(obj2)
-            
+def GetTestList():
+    obj = json.load(open("Tests.raw","r"))
+    return obj
+
     
+def PrintSingalTest(Test, i):
+    print('\033[1m\033[32m'+str(i)+'.',Test['time'].split()[0],Test['examName'])
+#    PrintDetailedTest(Test)
 
-# 模拟浏览器访问
-
-home_url = "http://student.7net.cc/Default"
-base_login = "http://student.7net.cc/Login"  # 一定不能写成http,否则无法登录
-
-session = requests.session()
-session.cookies = http.cookiejar.LWPCookieJar(filename='ZhiHuCookies')
-try:
-    # 加载Cookies文件
-    session.cookies.load(ignore_discard=True)
-except:
-    print("cookie未保存或cookie已过期")
-    # # 第一步 获取_xsrf
-    # _xsrf = BS(session.get(home_url, headers=headers).text, "lxml").find("input", {"name": "_xsrf"})["value"]
-
-    # # 第二步 根据账号判断登录方式
-    # account = input("请输入您的账号：")
-    # password = input("请输入您的密码：")
-
-    # # 第三步 获取验证码图片
-    # gifUrl = "http://www.zhihu.com/captcha.gif?r=" + str(int(time.time() * 1000)) + "&type=login"
-    # gif = session.get(gifUrl, headers=headers)
-    # # 保存图片
-    # with open('code.gif', 'wb') as f:
-    #     f.write(gif.content)
-    # # 打开图片
-    # Popen('code.gif', shell=True)
-    # # 输入验证码
-    # captcha = input('captcha: ')
-
-
-    # # 第四步 判断account类型是手机号还是邮箱
-    # if re.match("^.+\@(\[?)[a-zA-Z0-9\-\.]+\.([a-zA-Z]{2,3}|[0-9]{1,3})(\]?)$", account):
-    #     # 邮箱
-    #     data["email"] = account
-    #     base_login = base_login + "email"
-    # else:
-    #     # 手机号
-    #     data["phone_num"] = account
-    #     base_login = base_login + "phone_num"
-
-    # print(data)
-
-    # 第五步 登录
-
-data = {
-        '_septnet_document' : '{"usercode":"'+user+'","password":"'+pwdd+'"}'
-}
     
-response = session.post(base_login, data=data, headers=headers)
-# print(response.content.decode("utf-8"))
+def PrintRecentTest(num = 10):
 
-    # 第六步 保存cookie
-session.cookies.save()
+    TList=json.load(open("Tests.raw","r"))
+    for i in range(0,min(num,len(TList))):
+        PrintSingalTest(TList[i],i+1)
 
-# 获取首页信息
-resp = session.get(home_url, headers=headers, allow_redirects=False)
-# print(resp.content.decode("utf-8"))
-FetchDetailedTest(GetTestList())
+def PrintDetailedTest(Test):
+    print('\033[1m\033[36m'+Test['examName'])
+    for i in Test['km']:
+        st='\033[1m\033[32m['+i['Name']+'] '
+        st+='[Score:'+str(i['Score'])+'] '
+        st+='\033[0m'
+        print('\033[1m\033[32m%-10s%+5s' %(i['Name'],str(i['Score'])))
+    print('\033[1m\033[33m%-10s%5.0f'%('排名估计',Test['studentCount']-Test['allPercent']*Test['studentCount']*0.01))
+    print('\033[0m')
+
+
+def main(argv):    
+    try:
+        opts, args = getopt.getopt(argv,"hRUr:t:",["id=","ofile="])
+    except getopt.GetoptError:
+        print ('7net.py -R -r <num> -t <test_id> -U')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('7net.py -R -r <num> -t <test_id> -U')
+            sys.exit()
+        elif opt in ("-R"):
+            PrintRecentTest()
+        elif opt in ("-r"):
+            PrintRecentTest(int(arg))
+        elif opt in ("-t"):
+            num = int(arg)
+            num = num-1
+            ts=GetTestList()
+            Test=GetTestDetail(ts[num]['examPlanGuid'],ts[num]['studentCode'])
+            PrintDetailedTest(Test)
+        elif opt in ("-U"):
+            UpdateTestList()
+            print("\033[1m\033[32mSuccess\033[0m")
+           
+          
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
+
+# ts = GetTestList()
+# PrintDetailedTest(GetTestDetail(ts[0]['examPlanGuid'],ts[0]['studentCode']))
+
 
