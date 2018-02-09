@@ -91,7 +91,27 @@ def UpdateTestList():
     TestFinal=json.loads(TestList)
     json.dump(TestFinal['List'],open("Tests.raw","w"))
 
+def DownloadSingleTest(Test):
+    st="http://student.7net.cc/exam/ViewErrBook?examguid="
+    ste="&km=数学"
+    durl=st+Test['examPlanGuid']+ste+"'"
+    response=session.get(durl)
+    print(response.content.decode("utf-8"))
+    
 
+
+def DownloadAllTest():
+    Check_Login()
+    TList=json.load(open("Tests.raw","r"))
+
+    for i in range(0,1):
+        DownloadSingleTest(TList[i])
+
+
+    
+    
+
+    
 
 def GetTestList():
     obj = json.load(open("Tests.raw","r"))
@@ -122,7 +142,7 @@ def PrintDetailedTest(Test):
 
 def main(argv):    
     try:
-        opts, args = getopt.getopt(argv,"hRUr:t:",["id=","ofile="])
+        opts, args = getopt.getopt(argv,"hRDUr:t:",["id=","ofile="])
     except getopt.GetoptError:
         print ('7net.py -R -r <num> -t <test_id> -U')
         sys.exit(2)
@@ -143,7 +163,9 @@ def main(argv):
         elif opt in ("-U"):
             UpdateTestList()
             print("\033[1m\033[32mSuccess\033[0m")
-           
+        elif opt in ("-D"):
+            DownloadAllTest()
+            print("Download OK!")
           
 
 
